@@ -13,7 +13,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 internal object Interstitial {
     private var interstitialAd: InterstitialAd? = null
 
-    fun load(activity: Activity, interstitialId: String) {
+    fun load(activity: Activity, interstitialId: String, onFinish: (() -> Unit)? = null) {
         InterstitialAd.load(
             activity,
             interstitialId,
@@ -23,10 +23,12 @@ internal object Interstitial {
                     interstitialAd = null
                     BeeAdmob.logging("InterstitialAd : " + adError.message)
                     BeeAdmob.logging("InterstitialAd : " + adError.code)
+                    onFinish?.invoke()
                 }
 
                 override fun onAdLoaded(ad: InterstitialAd) {
                     interstitialAd = ad
+                    onFinish?.invoke()
                 }
             })
     }
@@ -41,12 +43,12 @@ internal object Interstitial {
             it.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     callback?.invoke()
-                    load(activity, interstitialId)
+                    load(activity, interstitialId, null)
                 }
 
                 override fun onAdFailedToShowFullScreenContent(adError: AdError) {
                     callback?.invoke()
-                    load(activity, interstitialId)
+                    load(activity, interstitialId,  null)
                     BeeAdmob.logging("Admob InterstitialAd : " + adError.message)
                     BeeAdmob.logging("Admob InterstitialAd : " + adError.code)
                 }

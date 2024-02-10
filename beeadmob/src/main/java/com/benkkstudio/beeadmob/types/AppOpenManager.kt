@@ -1,8 +1,11 @@
+@file:Suppress("DEPRECATION")
+
 package com.benkkstudio.beeadmob.types
 
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -15,12 +18,20 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import java.util.Date
 
-
-@Suppress("DEPRECATION")
-internal class OpenAds private constructor(
-    private val application: Application, private val openId: String, private val blockedActivity: ArrayList<Activity>
+internal class AppOpenManager private  constructor(
+    private val application: Application, private val openId: String, private val blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() ->
+    Unit)? = null
 ) :
     LifecycleObserver, Application.ActivityLifecycleCallbacks {
+        companion object {
+            fun init(application: Application, openId: String, blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() -> Unit)? = null){
+                Builder(application)
+                    .setOpenId(openId)
+                    .setBlockedActivity(blockedActivity)
+                    .setOnFinish(onFinish)
+                    .build()
+            }
+        }
     private var currentActivity: Activity? = null
     private var appOpenAd: AppOpenAd? = null
     private var isShowingAd = false
@@ -30,6 +41,7 @@ internal class OpenAds private constructor(
     init {
         application.registerActivityLifecycleCallbacks(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        onFinish?.invoke()
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
@@ -115,11 +127,12 @@ internal class OpenAds private constructor(
     }
 
     private fun isNotBlockedActivity(): Boolean {
-        if (blockedActivity.isEmpty()) return true
-        currentActivity?.let {
-            blockedActivity.forEach { activity ->
-                if (activity::class.java == it::class.java) {
-                    return false
+        blockedActivity?.let {
+            currentActivity?.let {
+                blockedActivity.forEach { activity ->
+                    if (activity::class.java == it::class.java) {
+                        return false
+                    }
                 }
             }
         }
@@ -128,9 +141,11 @@ internal class OpenAds private constructor(
 
     class Builder(private val application: Application) {
         private var openId: String = ""
-        private var blockedActivity: ArrayList<Activity> = arrayListOf()
+        private var blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf()
+        private var onFinish: (() -> Unit)? = null
         fun setOpenId(openId: String) = apply { this.openId = openId }
-        fun setBlockedActivity(blockedActivity: ArrayList<Activity>) = apply { this.blockedActivity = blockedActivity }
-        fun build() = OpenAds(application, openId, blockedActivity)
+        fun setBlockedActivity(blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf()) = apply { this.blockedActivity = blockedActivity }
+        fun setOnFinish(onFinish: (() -> Unit)? = null) = apply { this.onFinish = onFinish }
+        fun build() = AppOpenManager(application, openId, blockedActivity, onFinish)
     }
 }

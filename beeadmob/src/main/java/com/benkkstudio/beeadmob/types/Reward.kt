@@ -13,7 +13,7 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 internal object Reward {
     private var rewardedAd: RewardedAd? = null
 
-    fun load(activity: Activity, rewardId: String) {
+    fun load(activity: Activity, rewardId: String, onFinish: (() -> Unit)? = null) {
         RewardedAd.load(
             activity,
             rewardId,
@@ -23,10 +23,12 @@ internal object Reward {
                     rewardedAd = null
                     BeeAdmob.logging("Admob RewardedAd : " + adError.message)
                     BeeAdmob.logging("Admob RewardedAd : " + adError.code)
+                    onFinish?.invoke()
                 }
 
                 override fun onAdLoaded(ad: RewardedAd) {
                     rewardedAd = ad
+                    onFinish?.invoke()
                 }
             })
     }

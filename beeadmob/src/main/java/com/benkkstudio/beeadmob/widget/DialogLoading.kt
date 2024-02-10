@@ -6,11 +6,10 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Window
 import androidx.annotation.LayoutRes
-import androidx.appcompat.app.AlertDialog
 import com.benkkstudio.beeadmob.R
 
 
-internal class DialogLoading(context: Context, private val loadingTime: Long = 0L, @LayoutRes customLayout: Int = R.layout.dialog_progress) :
+internal class DialogLoading(context: Context, private val loadingTime: Int = 0, @LayoutRes customLayout: Int = R.layout.dialog_progress) :
     Dialog(context, R.style.WideDialog) {
 
 
@@ -35,6 +34,6 @@ internal class DialogLoading(context: Context, private val loadingTime: Long = 0
         Handler(Looper.getMainLooper()).postDelayed({
             if (isShowing) dismiss()
             callback.invoke()
-        }, loadingTime)
+        }, loadingTime.toLong())
     }
 }

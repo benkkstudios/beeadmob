@@ -11,7 +11,7 @@ internal data class AdmobModel(
     var rewardId: String = "",
     var nativeId: String = "",
     var openId: String = "",
-    var withLoading: Boolean = false,
+    var loadingTime: Int = 0,
     var interstitialInterval: Int? = 0,
     var customLadingView: Int = R.layout.dialog_progress
 )

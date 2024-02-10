@@ -1,5 +1,6 @@
 package com.benkkstudio.beeadmob.types
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import com.benkkstudio.beeadmob.BeeAdRequest
 import com.benkkstudio.beeadmob.BeeAdmob
@@ -16,7 +17,8 @@ interface NativeListener {
 
 internal object Native {
     private val listNative = arrayListOf<NativeAd>()
-    private fun load(activity: Activity, nativeId: String, nativeListener: NativeListener) {
+    @SuppressLint("MissingPermission")
+    fun load(activity: Activity, nativeId: String, nativeListener: NativeListener? = null) {
         val adLoader = AdLoader.Builder(activity, nativeId)
             .forNativeAd { nativeAd: NativeAd ->
                 listNative.add(nativeAd)
@@ -26,12 +28,12 @@ internal object Native {
                     super.onAdFailedToLoad(adError)
                     BeeAdmob.logging("Admob Native : " + adError.message)
                     BeeAdmob.logging("Admob Native : " + adError.code)
-                    nativeListener.onFailed()
+                    nativeListener?.onFailed()
                 }
 
                 override fun onAdLoaded() {
                     super.onAdLoaded()
-                    nativeListener.onLoaded(listNative.random())
+                    nativeListener?.onLoaded(listNative.random())
                 }
             })
             .build()
@@ -39,11 +41,9 @@ internal object Native {
     }
 
 
-    fun getNative(activity: Activity, nativeId: String, nativeListener: NativeListener) {
-        if (listNative.isEmpty()) {
-            load(activity, nativeId, nativeListener)
-        } else {
-            nativeListener.onLoaded(listNative.random())
+    fun getNative(callback: (NativeAd) -> Unit) {
+        if (listNative.isNotEmpty()) {
+            callback.invoke(listNative.random())
         }
     }
 }
