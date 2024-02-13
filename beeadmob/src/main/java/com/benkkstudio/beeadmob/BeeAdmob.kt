@@ -2,79 +2,67 @@ package com.benkkstudio.beeadmob
 
 import android.app.Activity
 import android.app.Application
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AppCompatActivity
-import com.benkkstudio.beeadmob.model.AdmobModel
+import com.benkkstudio.beeadmob.interfaces.BeeAdmobListener
+import com.benkkstudio.beeadmob.model.Config
 import com.benkkstudio.beeadmob.natives.NativeView
+import com.benkkstudio.beeadmob.types.AppOpenManager
 import com.benkkstudio.beeadmob.types.Banner
+import com.benkkstudio.beeadmob.types.BeeOpenOptions
 import com.benkkstudio.beeadmob.types.Interstitial
 import com.benkkstudio.beeadmob.types.Native
-import com.benkkstudio.beeadmob.types.NativeListener
-import com.benkkstudio.beeadmob.types.AppOpenManager
 import com.benkkstudio.beeadmob.types.Reward
 import com.benkkstudio.beeadmob.widget.DialogLoading
 import com.benkkstudio.beeconsent.BeeConsent
 import com.benkkstudio.beeconsent.BeeConsentCallback
-
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.nativead.NativeAd
+
 
 @Suppress("unused")
 class BeeAdmob {
-    class DummyAdmob {
-        companion object {
-            const val INTERSTITIAL = "ca-app-pub-3940256099942544/1033173712"
-            const val BANNER = "ca-app-pub-3940256099942544/6300978111"
-            const val REWARD = "ca-app-pub-3940256099942544/5224354917"
-            const val OPEN = "ca-app-pub-3940256099942544/9257395921"
-            const val NATIVE = "/6499/example/native"
-        }
-    }
-
     companion object {
-        private lateinit var admobModel: AdmobModel
         private lateinit var dialogLoading: DialogLoading
-        private var application: Application? = null
-        private var blockedActivity: ArrayList<AppCompatActivity> = arrayListOf()
-        private var onFinish: (() -> Unit)? = null
+        private lateinit var beeAdmobAdsUnit: BeeAdmobAdsUnit
+        private lateinit var config: Config
+        private var beeAdmobListener: BeeAdmobListener? = null
+        private var beeOpenOptions: BeeOpenOptions.Builder? = null
         internal fun build(
-            activity: Activity, admobModel: AdmobModel, loadingTime: Int, application: Application?, blockedActivity: ArrayList<AppCompatActivity> =
-                arrayListOf(), onFinish: (() -> Unit)? = null
+            activity: Activity,
+            beeAdmobListener: BeeAdmobListener? = null,
+            beeAdmobAdsUnit: BeeAdmobAdsUnit? = null,
+            config: Config,
+            beeOpenOptions: BeeOpenOptions.Builder?
         ) {
-            this.admobModel = admobModel
-            this.application = application
-            this.blockedActivity = blockedActivity
-            this.onFinish = onFinish
-            dialogLoading = DialogLoading(activity, loadingTime, admobModel.customLadingView)
-            requestConsent(activity)
-        }
-
-        internal fun logging(any: Any) {
-            try {
-                if (admobModel.enableLogging) {
-                    Log.e("ABENK : ", any.toString())
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            this.config = config
+            this.beeAdmobListener = beeAdmobListener
+            this.beeOpenOptions = beeOpenOptions
+            Banner.setListener(beeAdmobListener)
+            Interstitial.setListener(beeAdmobListener)
+            Reward.setListener(beeAdmobListener)
+            Native.setListener(beeAdmobListener)
+            if (beeAdmobAdsUnit != null) {
+                this.beeAdmobAdsUnit = beeAdmobAdsUnit
+                dialogLoading = DialogLoading(activity, config.loadingTime, config.customLadingView)
+                requestConsent(activity)
             }
         }
 
+
         private fun requestConsent(activity: Activity) {
             BeeConsent.Builder(activity)
-                .debugMode(admobModel.debugMode)
-                .enableLogging(admobModel.enableLogging)
+                .debugMode(config.debugMode)
+                .enableLogging(config.debugMode)
                 .listener(object : BeeConsentCallback {
                     override fun onRequested() {
                         MobileAds.initialize(activity) {
-                            loadOpenAd {
-                                loadNative(activity){
-                                    loadInterstitial(activity){
-                                        loadReward(activity, onFinish)
-                                    }
-                                }
+                            loadOpenAd()
+                            loadInterstitial(activity)
+                            loadReward(activity)
+                            loadNative(activity) {
+                                beeAdmobListener?.initListener?.onInit()
                             }
                         }
                     }
@@ -82,46 +70,41 @@ class BeeAdmob {
                 .request()
         }
 
-        fun loadOpenAd(application: Application, openId: String, blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() -> Unit)? =
-            null) {
-            if(admobModel.openId.isNotEmpty()){
+        fun loadOpenAd(
+            application: Application, openId: String, blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() -> Unit)? =
+                null
+        ) {
+            if (beeAdmobAdsUnit.openId.isNotEmpty()) {
                 AppOpenManager.init(application, openId, blockedActivity, onFinish)
             }
         }
 
-        private fun loadOpenAd(onFinish: () -> Unit) {
-            if(admobModel.openId.isNotEmpty()){
-                if(application == null){
-                    throw Exception("please call setApplication(application: Application) in BeeAdmob.Builder")
-                }
-                application?.let {
-                    AppOpenManager.Builder(it)
-                        .setOpenId(admobModel.openId)
-                        .setBlockedActivity(blockedActivity)
-                        .setOnFinish(onFinish)
-                        .build()
-                }
+        private fun loadOpenAd() {
+            if (beeOpenOptions == null || beeAdmobAdsUnit.openId.isBlank()) {
+                return
             } else {
-                onFinish.invoke()
+                AppOpenManager.Builder(beeOpenOptions!!.application)
+                    .setOpenId(beeAdmobAdsUnit.openId)
+                    .setBlockedActivity(beeOpenOptions!!.blockedActivity)
+                    .setListener(beeAdmobListener)
+                    .build()
             }
         }
 
-        private fun loadInterstitial(activity: Activity, onFinish: () -> Unit) {
-            if (admobModel.interstitialId.isNotEmpty()) {
-                Interstitial.load(activity, admobModel.interstitialId, onFinish)
-            } else {
-                onFinish.invoke()
+        private fun loadInterstitial(activity: Activity) {
+            if (beeAdmobAdsUnit.interstitialId.isNotEmpty()) {
+                Interstitial.load(activity, beeAdmobAdsUnit.interstitialId)
             }
         }
 
         fun showInterstitial(activity: Activity, callback: (() -> Unit)? = null) {
-            if (admobModel.interstitialId.isNotEmpty()) {
-                if(admobModel.loadingTime != 0){
+            if (beeAdmobAdsUnit.interstitialId.isNotEmpty()) {
+                if (config.loadingTime != 0) {
                     dialogLoading.showAndDismiss {
-                        Interstitial.show(activity, admobModel.interstitialId, callback)
+                        Interstitial.show(activity, beeAdmobAdsUnit.interstitialId, callback)
                     }
                 } else {
-                    Interstitial.show(activity, admobModel.interstitialId, callback)
+                    Interstitial.show(activity, beeAdmobAdsUnit.interstitialId, callback)
                 }
             } else callback?.invoke()
         }
@@ -129,47 +112,40 @@ class BeeAdmob {
 
         private var clickCount = 0
         fun showInterstitialRandom(activity: Activity, callback: (() -> Unit)? = null) {
-            admobModel.interstitialInterval?.let { interval ->
+            if (beeAdmobAdsUnit.interstitialInterval <= 0) {
+                showInterstitial(activity, callback)
+            } else {
                 clickCount++
-                if (clickCount == interval) {
+                if (clickCount == beeAdmobAdsUnit.interstitialInterval) {
                     showInterstitial(activity, callback)
                     clickCount = 0
                 } else callback?.invoke()
             }
         }
 
-        private fun loadReward(activity: Activity, onFinish: (() -> Unit)? = null) {
-            if (admobModel.rewardId.isNotEmpty()) {
-                Reward.load(activity, admobModel.rewardId, onFinish)
-            } else {
-                onFinish?.invoke()
+        private fun loadReward(activity: Activity) {
+            if (beeAdmobAdsUnit.rewardId.isNotEmpty()) {
+                Reward.load(activity, beeAdmobAdsUnit.rewardId)
             }
         }
 
         fun showReward(activity: Activity, callback: (() -> Unit)? = null) {
-            if (admobModel.rewardId.isNotEmpty()) {
-                if(admobModel.loadingTime != 0){
+            if (beeAdmobAdsUnit.rewardId.isNotEmpty()) {
+                if (config.loadingTime != 0) {
                     dialogLoading.showAndDismiss {
-                        Reward.show(activity, admobModel.rewardId, callback)
+                        Reward.show(activity, beeAdmobAdsUnit.rewardId, callback)
                     }
                 } else {
-                    Reward.show(activity, admobModel.rewardId, callback)
+                    Reward.show(activity, beeAdmobAdsUnit.rewardId, callback)
                 }
             } else callback?.invoke()
         }
 
         private fun loadNative(activity: Activity, onFinish: () -> Unit) {
-            if(admobModel.nativeId.isNotEmpty()){
-                Native.load(activity, admobModel.nativeId, object : NativeListener {
-                    override fun onLoaded(nativeAd: NativeAd) {
-                        onFinish.invoke()
-                    }
-
-                    override fun onFailed() {
-                        onFinish.invoke()
-                    }
-
-                })
+            if (beeAdmobAdsUnit.nativeId.isNotEmpty()) {
+                Native.load(activity, beeAdmobAdsUnit.nativeId) {
+                    onFinish.invoke()
+                }
             } else {
                 onFinish.invoke()
             }
@@ -184,33 +160,25 @@ class BeeAdmob {
         }
 
         fun showBanner(activity: Activity, adsContainer: ViewGroup) {
-            if (admobModel.bannerId.isNotEmpty()) {
-                Banner.show(activity, adsContainer, admobModel.bannerId)
+            if (beeAdmobAdsUnit.bannerId.isNotEmpty()) {
+                Banner.show(activity, adsContainer, beeAdmobAdsUnit.bannerId)
             }
         }
     }
 
 
     class Builder(private val activity: Activity) {
-        private var application: Application? = null
-        private val admobModel = AdmobModel()
-        private var blockedActivity: ArrayList<AppCompatActivity> = arrayListOf()
-        private var loadingTime = 0
-        fun enableLogging(enableLogging: Boolean) = apply { admobModel.enableLogging = enableLogging }
-        fun debugMode(debugMode: Boolean) = apply { admobModel.debugMode = debugMode }
-        fun interstitialId(interstitialId: String) = apply { admobModel.interstitialId = interstitialId }
-        fun interstitialInterval(interstitialInterval: Int) = apply { admobModel.interstitialInterval = interstitialInterval }
-        fun bannerId(bannerId: String) = apply { admobModel.bannerId = bannerId }
-        fun rewardId(rewardId: String) = apply { admobModel.rewardId = rewardId }
-        fun nativeId(nativeId: String) = apply { admobModel.nativeId = nativeId }
-        fun openId(openId: String) = apply { admobModel.openId = openId }
-        fun setApplication(application: Application) = apply { this.application = application }
-        fun setBlockedActivity(blockedActivity: ArrayList<AppCompatActivity>) = apply { this.blockedActivity = blockedActivity }
-        fun withLoading(loadingTime: Int) = apply {
-            admobModel.loadingTime = loadingTime
-        }
-        fun customLadingView(@LayoutRes customLadingView: Int) = apply { admobModel.customLadingView = customLadingView }
-        fun request(onFinish: (() -> Unit)? = null) = build(activity, admobModel, loadingTime, application, blockedActivity, onFinish)
-
+        private val config = Config()
+        private var beeAdmobAdsUnit: BeeAdmobAdsUnit? = null
+        private var beeAdmobListener: BeeAdmobListener? = null
+        private var beeOpenOptions: BeeOpenOptions.Builder? = null
+        fun setAdsUnit(beeAdmobAdsUnit: BeeAdmobAdsUnit) = apply { this.beeAdmobAdsUnit = beeAdmobAdsUnit }
+        fun setListener(beeAdmobListener: BeeAdmobListener?) = apply { this.beeAdmobListener = beeAdmobListener }
+        fun setOpenAdsOptions(beeOpenOptions: BeeOpenOptions.Builder) = apply { this.beeOpenOptions = beeOpenOptions }
+        fun setDebugMode(debugMode: Boolean) = apply { config.debugMode = debugMode }
+        fun setLoadingTime(loadingTime: Int) = apply { config.loadingTime = loadingTime }
+        fun setLoadingView(@LayoutRes customLadingView: Int) = apply { config.customLadingView = customLadingView }
+        fun build() = build(activity, beeAdmobListener, beeAdmobAdsUnit, config, beeOpenOptions)
     }
+
 }

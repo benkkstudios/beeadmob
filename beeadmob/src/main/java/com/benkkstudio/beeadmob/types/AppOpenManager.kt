@@ -11,27 +11,32 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.benkkstudio.beeadmob.BeeAdRequest
-import com.benkkstudio.beeadmob.BeeAdmob
+import com.benkkstudio.beeadmob.interfaces.BeeAdmobListener
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import java.util.Date
 
-internal class AppOpenManager private  constructor(
-    private val application: Application, private val openId: String, private val blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() ->
-    Unit)? = null
+internal class AppOpenManager private constructor(
+    private val application: Application,
+    private val openId: String,
+    private val blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(),
+    onFinish: (() ->
+    Unit)? = null,
+    private var beeAdmobListener: BeeAdmobListener? = null
 ) :
     LifecycleObserver, Application.ActivityLifecycleCallbacks {
-        companion object {
-            fun init(application: Application, openId: String, blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() -> Unit)? = null){
-                Builder(application)
-                    .setOpenId(openId)
-                    .setBlockedActivity(blockedActivity)
-                    .setOnFinish(onFinish)
-                    .build()
-            }
+    companion object {
+        fun init(application: Application, openId: String, blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf(), onFinish: (() -> Unit)? = null) {
+            Builder(application)
+                .setOpenId(openId)
+                .setBlockedActivity(blockedActivity)
+                .setOnFinish(onFinish)
+                .build()
         }
+    }
+
     private var currentActivity: Activity? = null
     private var appOpenAd: AppOpenAd? = null
     private var isShowingAd = false
@@ -61,13 +66,16 @@ internal class AppOpenManager private  constructor(
                     isShowingAd = false
                     showTime = Date().time
                     fetchAd()
+                    beeAdmobListener?.openListener?.dismiss()
                 }
 
                 override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    beeAdmobListener?.openListener?.failShow(adError)
                 }
 
                 override fun onAdShowedFullScreenContent() {
                     isShowingAd = true
+                    beeAdmobListener?.openListener?.showed()
                 }
             }
             appOpenAd!!.show(currentActivity!!)
@@ -86,12 +94,12 @@ internal class AppOpenManager private  constructor(
                 super.onAdLoaded(ad)
                 appOpenAd = ad
                 loadTime = Date().time
+                beeAdmobListener?.openListener?.loaded(ad)
             }
 
             override fun onAdFailedToLoad(adError: LoadAdError) {
                 super.onAdFailedToLoad(adError)
-                BeeAdmob.logging("Admob OPEN : " + adError.message)
-                BeeAdmob.logging("Admob OPEN : " + adError.code)
+                beeAdmobListener?.openListener?.failLoad(adError)
             }
         })
     }
@@ -142,10 +150,12 @@ internal class AppOpenManager private  constructor(
     class Builder(private val application: Application) {
         private var openId: String = ""
         private var blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf()
+        private var beeAdmobListener: BeeAdmobListener? = null
         private var onFinish: (() -> Unit)? = null
+        fun setListener(beeAdmobListener: BeeAdmobListener? = null) = apply { this.beeAdmobListener = beeAdmobListener }
         fun setOpenId(openId: String) = apply { this.openId = openId }
         fun setBlockedActivity(blockedActivity: ArrayList<AppCompatActivity>? = arrayListOf()) = apply { this.blockedActivity = blockedActivity }
         fun setOnFinish(onFinish: (() -> Unit)? = null) = apply { this.onFinish = onFinish }
-        fun build() = AppOpenManager(application, openId, blockedActivity, onFinish)
+        fun build() = AppOpenManager(application, openId, blockedActivity, onFinish, beeAdmobListener)
     }
 }

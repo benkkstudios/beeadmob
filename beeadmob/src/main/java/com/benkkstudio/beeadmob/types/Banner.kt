@@ -1,41 +1,38 @@
 package com.benkkstudio.beeadmob.types
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.util.DisplayMetrics
 import android.view.View
 import android.view.ViewGroup
 import com.benkkstudio.beeadmob.BeeAdRequest
-import com.benkkstudio.beeadmob.BeeAdmob
+import com.benkkstudio.beeadmob.interfaces.BeeAdmobListener
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 
-
+@SuppressLint("MissingPermission")
 internal object Banner {
+    private var beeAdmobListener: BeeAdmobListener? = null
+    fun setListener(beeAdmobListener: BeeAdmobListener? = null) {
+        this.beeAdmobListener = beeAdmobListener
+    }
+
     fun show(activity: Activity, view: ViewGroup, bannerId: String) {
         view.visibility = View.GONE
         val adView = AdView(activity)
         adView.adUnitId = bannerId
         adView.setAdSize(adSize(activity, view))
         adView.adListener = object : AdListener() {
-            override fun onAdLoaded() { // Code to be executed when an ad finishes loading.
+            override fun onAdLoaded() {
                 view.addView(adView, 0)
                 view.visibility = View.VISIBLE
+                beeAdmobListener?.bannerListener?.loaded()
             }
 
-            override fun onAdFailedToLoad(adError: LoadAdError) { // Code to be executed when an ad request fails.
-                BeeAdmob.logging("Admob Banner : " + adError.message)
-                BeeAdmob.logging("Admob Banner : " + adError.code)
-            }
-
-            override fun onAdOpened() { // Code to be executed when an ad opens an overlay that
-            }
-
-            override fun onAdClicked() { // Code to be executed when the user clicks on an ad.
-            }
-
-            override fun onAdClosed() { // Code to be executed when the user is about to return
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                beeAdmobListener?.bannerListener?.failLoad(adError)
             }
         }
         adView.loadAd(BeeAdRequest.build(activity))
