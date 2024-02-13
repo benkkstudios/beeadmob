@@ -1,5 +1,6 @@
 package com.benkkstudio.beeadmob.interfaces
 
+import com.benkkstudio.beeadmob.AdsType
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
@@ -11,13 +12,13 @@ abstract class BeeAdmobListener {
     open fun onInitialized() {}
     open fun onBannerLoaded() {}
     open fun onInterstitialLoaded(interstitial: InterstitialAd) {}
-    open fun onRewardLoaded(rewardAd: RewardedAd) {}
+    open fun onRewardLoaded( rewardAd: RewardedAd) {}
     open fun onOpenLoaded(openAd: AppOpenAd) {}
     open fun onNativeLoaded(nativeAd: NativeAd) {}
-    open fun onAdFailedToLoad(error: LoadAdError) {}
-    open fun onDismissFullScreenContent() {}
-    open fun onFailedShowFullScreenContent(error: AdError) {}
-    open fun onAdShowedFullScreenContent() {}
+    open fun onAdFailedToLoad(type: AdsType, error: LoadAdError) {}
+    open fun onDismissFullScreenContent(type: AdsType) {}
+    open fun onFailedShowFullScreenContent(type: AdsType, error: AdError) {}
+    open fun onAdShowedFullScreenContent(type: AdsType) {}
 
     val initListener = object : InitListener {
         override fun onInit() {
@@ -27,11 +28,11 @@ abstract class BeeAdmobListener {
 
     val nativeListener = object : NativeListener {
         override fun loaded(nativeAd: NativeAd) {
-            onNativeLoaded(nativeAd)
+            onNativeLoaded( nativeAd)
         }
 
         override fun failLoad(error: LoadAdError) {
-            onAdFailedToLoad(error)
+            onAdFailedToLoad(AdsType.NATIVE, error)
         }
     }
 
@@ -41,19 +42,19 @@ abstract class BeeAdmobListener {
         }
 
         override fun failLoad(error: LoadAdError) {
-            onAdFailedToLoad(error)
+            onAdFailedToLoad(AdsType.APP_OPEN, error)
         }
 
         override fun dismiss() {
-            onDismissFullScreenContent()
+            onDismissFullScreenContent(AdsType.APP_OPEN)
         }
 
         override fun failShow(error: AdError) {
-            onFailedShowFullScreenContent(error)
+            onFailedShowFullScreenContent(AdsType.APP_OPEN, error)
         }
 
         override fun showed() {
-            onAdShowedFullScreenContent()
+            onAdShowedFullScreenContent(AdsType.APP_OPEN)
         }
     }
     val rewardListener = object : RewardListener {
@@ -62,19 +63,19 @@ abstract class BeeAdmobListener {
         }
 
         override fun failLoad(error: LoadAdError) {
-            onAdFailedToLoad(error)
+            onAdFailedToLoad(AdsType.REWARD, error)
         }
 
         override fun dismiss() {
-            onDismissFullScreenContent()
+            onDismissFullScreenContent(AdsType.REWARD)
         }
 
         override fun failShow(error: AdError) {
-            onFailedShowFullScreenContent(error)
+            onFailedShowFullScreenContent(AdsType.REWARD, error)
         }
 
         override fun showed() {
-            onAdShowedFullScreenContent()
+            onAdShowedFullScreenContent(AdsType.REWARD)
         }
     }
 
@@ -84,7 +85,7 @@ abstract class BeeAdmobListener {
         }
 
         override fun failLoad(error: LoadAdError) {
-            onAdFailedToLoad(error)
+            onAdFailedToLoad(AdsType.BANNER, error)
         }
     }
 
@@ -94,19 +95,19 @@ abstract class BeeAdmobListener {
         }
 
         override fun failLoad(error: LoadAdError) {
-            onAdFailedToLoad(error)
+            onAdFailedToLoad(AdsType.INTERSTITIAL, error)
         }
 
         override fun dismiss() {
-            onDismissFullScreenContent()
+            onDismissFullScreenContent(AdsType.INTERSTITIAL)
         }
 
         override fun failShow(error: AdError) {
-            onFailedShowFullScreenContent(error)
+            onFailedShowFullScreenContent(AdsType.INTERSTITIAL, error)
         }
 
         override fun showed() {
-            onAdShowedFullScreenContent()
+            onAdShowedFullScreenContent(AdsType.INTERSTITIAL)
         }
     }
 

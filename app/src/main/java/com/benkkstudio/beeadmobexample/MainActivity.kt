@@ -4,9 +4,9 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.LinearLayoutCompat
+import com.benkkstudio.beeadmob.AdsType
 import com.benkkstudio.beeadmob.BeeAdmob
 import com.benkkstudio.beeadmob.interfaces.BeeAdmobListener
-
 import com.benkkstudio.beeadmob.natives.NativeView
 import com.benkkstudio.beeadmob.types.BeeOpenOptions
 import com.google.android.gms.ads.AdError
@@ -78,20 +78,20 @@ class MainActivity : AppCompatActivity() {
             super.onNativeLoaded(nativeAd)
         }
 
-        override fun onAdFailedToLoad(error: LoadAdError) {
-            super.onAdFailedToLoad(error)
+        override fun onAdFailedToLoad(type: AdsType, error: LoadAdError) {
+            super.onAdFailedToLoad(type, error)
         }
 
-        override fun onDismissFullScreenContent() {
-            super.onDismissFullScreenContent()
+        override fun onDismissFullScreenContent(type: AdsType) {
+            super.onDismissFullScreenContent(type)
         }
 
-        override fun onFailedShowFullScreenContent(error: AdError) {
-            super.onFailedShowFullScreenContent(error)
+        override fun onFailedShowFullScreenContent(type: AdsType, error: AdError) {
+            super.onFailedShowFullScreenContent(type, error)
         }
 
-        override fun onAdShowedFullScreenContent() {
-            super.onAdShowedFullScreenContent()
+        override fun onAdShowedFullScreenContent(type: AdsType) {
+            super.onAdShowedFullScreenContent(type)
         }
     }
 }
